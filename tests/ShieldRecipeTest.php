@@ -1,0 +1,111 @@
+<?php
+
+use AlwaysCurious\LaravelProjectDevtool\Events\DatabaseMigrated;
+use AlwaysCurious\LaravelProjectDevtool\Events\DatabaseSeeded;
+use AlwaysCurious\LaravelProjectDevtool\Recipes\GenerateShieldPermissions;
+use AlwaysCurious\LaravelProjectDevtool\Tests\TestSeeder;
+use Illuminate\Console\Command;
+use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Support\Facades\Event;
+
+/**
+ * A stand-in for filament-shield's shield:generate command so the recipe has a
+ * real registered command to call.
+ */
+class FakeShieldGenerate extends Command
+{
+    // Note: --no-interaction is a reserved Symfony global option, so it is NOT
+    // redeclared here even though the recipe passes it.
+    protected $signature = 'shield:generate {--all} {--panel=}';
+
+    protected $description = 'fake shield:generate';
+
+    public static int $runs = 0;
+
+    public static ?string $panel = null;
+
+    public function handle(): int
+    {
+        self::$runs++;
+        self::$panel = $this->option('panel');
+
+        return self::SUCCESS;
+    }
+}
+
+it('runs shield:generate with the configured panel when the recipe fires', function () {
+    FakeShieldGenerate::$runs = 0;
+    config()->set('project-devtool.recipes.shield.panel', 'control');
+
+    $this->app[Kernel::class]->registerCommand(new FakeShieldGenerate);
+
+    // Wire the recipe as it would be when enabled.
+    Event::listen(DatabaseMigrated::class, GenerateShieldPermissions::class);
+
+    $this->artisan('project:dev', ['--setup' => true, '--force' => true])
+        ->expectsOutputToContain('Generating Shield permissions')
+        ->assertExitCode(0);
+
+    expect(FakeShieldGenerate::$runs)->toBe(1)
+        ->and(FakeShieldGenerate::$panel)->toBe('control');
+});
+
+it('announces but does not run shield:generate on a dry run', function () {
+    FakeShieldGenerate::$runs = 0;
+
+    $this->app[Kernel::class]->registerCommand(new FakeShieldGenerate);
+
+    Event::listen(DatabaseMigrated::class, GenerateShieldPermissions::class);
+
+    $this->artisan('project:dev', ['--setup' => true, '--dry-run' => true])
+        ->expectsOutputToContain('[dry-run] would run: shield:generate')
+        ->assertExitCode(0);
+
+    expect(FakeShieldGenerate::$runs)->toBe(0);
+});
+
+/**
+ * A shield:generate stand-in that fails, to prove the recipe halts the run
+ * before seeding when permission generation does not succeed.
+ */
+class FailingShieldGenerate extends Command
+{
+    protected $signature = 'shield:generate {--all} {--panel=}';
+
+    protected $description = 'failing shield:generate';
+
+    public function handle(): int
+    {
+        return self::FAILURE;
+    }
+}
+
+it('aborts before seeding when shield:generate fails', function () {
+    TestSeeder::$runs = 0;
+    $seeded = false;
+
+    $this->app[Kernel::class]->registerCommand(new FailingShieldGenerate);
+
+    Event::listen(DatabaseMigrated::class, GenerateShieldPermissions::class);
+    Event::listen(DatabaseSeeded::class, function () use (&$seeded) {
+        $seeded = true;
+    });
+
+    $this->artisan('project:dev', ['--setup' => true, '--force' => true])
+        ->expectsOutputToContain('shield:generate failed')
+        ->expectsOutputToContain('migrated but not seeded')
+        ->assertExitCode(1);
+
+    // The schema was rebuilt, but seeding never ran against missing permissions.
+    expect($seeded)->toBeFalse()
+        ->and(TestSeeder::$runs)->toBe(0);
+});
+
+it('skips cleanly with a notice when shield:generate is not registered', function () {
+    // No FakeShieldGenerate registered: the recipe must skip, not error.
+    Event::listen(DatabaseMigrated::class, GenerateShieldPermissions::class);
+
+    $this->artisan('project:dev', ['--setup' => true, '--force' => true])
+        ->expectsOutputToContain("Skipping 'shield:generate'")
+        ->assertExitCode(0);
+});

@@ -1,0 +1,44 @@
+<?php
+
+namespace {{ namespace }};
+
+use AlwaysCurious\LaravelProjectDevtool\Events\{{ event }};
+
+/**
+ * A project:dev lifecycle hook.
+ *
+ * This listener is auto-discovered by Laravel — it runs whenever the
+ * {{ event }} event fires during `php artisan project:dev --setup`.
+ *
+ * Available lifecycle events (in firing order):
+ *   - SetupStarting    fired before the wipe confirmation; may throw AbortSetup to veto.
+ *   - CachesCleared    after optimize:clear.
+ *   - DatabaseMigrated after migrate:fresh, BEFORE seeding (e.g. generate permissions here).
+ *   - DatabaseSeeded   after db:seed (common attach point for demo data).
+ *   - AssetsBuilding   just before the asset build.
+ *   - SetupCompleted   after build, before the command returns (end-of-run report).
+ *
+ * Every event carries the running command via $event->command, so you can:
+ *   - call nested artisan commands:  $event->command->call('some:command', [...]);
+ *   - read the invocation options:   $event->command->option('new');
+ *   - write to the console output:   $event->command->info('...');
+ *
+ * $event->dryRun is true during `project:dev --setup --dry-run`. When it is set,
+ * announce what you WOULD do and return without making changes.
+ */
+class {{ class }}
+{
+    public function handle({{ event }} $event): void
+    {
+        // Respect a simulation: announce intent, change nothing.
+        if ($event->dryRun) {
+            $event->command->line('  [dry-run] would run my custom step');
+
+            return;
+        }
+
+        // Example: run another artisan command as part of the reset.
+        // $event->command->info('Doing my custom step…');
+        // $event->command->call('my:command', ['--force' => true]);
+    }
+}
