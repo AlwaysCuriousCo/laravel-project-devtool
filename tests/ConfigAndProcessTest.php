@@ -83,6 +83,26 @@ it('installs dependencies when --only=install is named, even without --new', fun
     expect($labels)->toBe(['composer install', 'npm install']);
 });
 
+it('does not claim deps were installed when no install command is configured', function () {
+    // Opted in via --new, but both install entries are empty: nothing runs, so
+    // the summary must not falsely report "Dependencies: installed".
+    config()->set('project-devtool.build', null);
+    config()->set('project-devtool.install', [
+        'composer' => null,
+        'npm' => [],
+    ]);
+
+    $fake = useFakeProjectDev();
+
+    $this->artisan('project:dev', ['--setup' => true, '--new' => true, '--force' => true])
+        ->expectsOutputToContain('Dependencies: nothing to install')
+        ->assertExitCode(0);
+
+    $labels = array_column($fake->calls, 'label');
+    expect($labels)->not->toContain('composer install')
+        ->and($labels)->not->toContain('npm install');
+});
+
 it('reports installed dependencies in the summary with --new', function () {
     config()->set('project-devtool.build', null);
     $fake = useFakeProjectDev();

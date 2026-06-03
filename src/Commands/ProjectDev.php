@@ -54,6 +54,13 @@ class ProjectDev extends Command
     /** Whether the current run is a no-op simulation. */
     private bool $dryRun = false;
 
+    /**
+     * Whether a dependency install (composer or npm) actually ran. Distinct
+     * from shouldInstall(): the user can opt in yet have no install commands
+     * configured, in which case nothing runs and the summary must say so.
+     */
+    private bool $ranInstall = false;
+
     public function handle(): int
     {
         if ($this->option('setup')) {
@@ -158,13 +165,19 @@ class ProjectDev extends Command
             $install = config('project-devtool.install', []);
 
             $composer = $install['composer'] ?? null;
-            if (! empty($composer) && ! $this->step('install', 'composer install', fn () => $this->runProcess($composer, 'composer install'))) {
-                return self::FAILURE;
+            if (! empty($composer)) {
+                $this->ranInstall = true;
+                if (! $this->step('install', 'composer install', fn () => $this->runProcess($composer, 'composer install'))) {
+                    return self::FAILURE;
+                }
             }
 
             $npm = $install['npm'] ?? null;
-            if (! empty($npm) && ! $this->step('install', 'npm install', fn () => $this->runProcess($npm, 'npm install'))) {
-                return self::FAILURE;
+            if (! empty($npm)) {
+                $this->ranInstall = true;
+                if (! $this->step('install', 'npm install', fn () => $this->runProcess($npm, 'npm install'))) {
+                    return self::FAILURE;
+                }
             }
         }
 
@@ -253,7 +266,14 @@ class ProjectDev extends Command
         $only = $parse($this->option('only'));
         $skip = $parse($this->option('skip'));
 
-        if ($only && $skip) {
+        // Distinguish "flag omitted" (null) from "flag passed but empty"
+        // (''). An empty --only is an explicit, but unsatisfiable, filter —
+        // treating it like an omitted flag would run the full destructive
+        // setup, which is exactly what the caller asked NOT to do.
+        $onlyPassed = $this->option('only') !== null;
+        $skipPassed = $this->option('skip') !== null;
+
+        if ($onlyPassed && $skipPassed) {
             $this->error('Use either --only or --skip, not both.');
 
             return null;
@@ -262,6 +282,12 @@ class ProjectDev extends Command
         $unknown = array_diff(array_merge($only, $skip), self::STEPS);
         if ($unknown) {
             $this->error('Unknown step(s): '.implode(', ', $unknown).'. Valid steps: '.self::STEP_LIST.'.');
+
+            return null;
+        }
+
+        if ($onlyPassed && $only === []) {
+            $this->error('--only was given no valid steps. Valid steps: '.self::STEP_LIST.'.');
 
             return null;
         }
@@ -387,9 +413,25 @@ class ProjectDev extends Command
             $this->line('Steps run: '.implode(', ', $steps));
         }
 
-        $this->line('Dependencies: '.(
-            $this->shouldInstall($steps) ? 'installed' : 'skipped (pass --new)'
-        ));
+        $this->line('Dependencies: '.$this->dependencySummary($steps));
+    }
+
+    /**
+     * The dependency line for the completion summary. Three states:
+     * - opted in AND something actually ran → "installed"
+     * - opted in but no composer/npm command configured → nothing ran, so we
+     *   say so rather than falsely claiming an install
+     * - not opted in → "skipped"
+     *
+     * @param  array<int, string>  $steps
+     */
+    private function dependencySummary(array $steps): string
+    {
+        if (! $this->shouldInstall($steps)) {
+            return 'skipped (pass --new)';
+        }
+
+        return $this->ranInstall ? 'installed' : 'nothing to install (no install command configured)';
     }
 
     /**

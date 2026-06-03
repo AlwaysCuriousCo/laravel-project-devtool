@@ -97,6 +97,39 @@ describe('--only / --skip', function () {
             ->assertExitCode(1);
     });
 
+    it('refuses to run when --only is passed but empty', function () {
+        // An empty --only (e.g. --only= from an unset env var) must NOT fall
+        // through to running every step — that would silently run migrate:fresh
+        // and seed in a script that explicitly asked to scope the run.
+        TestSeeder::$runs = 0;
+
+        $this->artisan('project:dev', ['--setup' => true, '--force' => true, '--only' => ''])
+            ->expectsOutputToContain('--only was given no valid steps')
+            ->assertExitCode(1);
+
+        expect(TestSeeder::$runs)->toBe(0);
+    });
+
+    it('refuses to run when --only is all separators', function () {
+        TestSeeder::$runs = 0;
+
+        $this->artisan('project:dev', ['--setup' => true, '--force' => true, '--only' => ',,'])
+            ->expectsOutputToContain('--only was given no valid steps')
+            ->assertExitCode(1);
+
+        expect(TestSeeder::$runs)->toBe(0);
+    });
+
+    it('treats an empty --skip as skip nothing', function () {
+        // The safe-direction counterpart: an empty --skip runs the full setup.
+        TestSeeder::$runs = 0;
+
+        $this->artisan('project:dev', ['--setup' => true, '--force' => true, '--skip' => ''])
+            ->assertExitCode(0);
+
+        expect(TestSeeder::$runs)->toBe(1);
+    });
+
     it('rejects an unknown step name', function () {
         $this->artisan('project:dev', ['--setup' => true, '--only' => 'bogus'])
             ->expectsOutputToContain('Unknown step(s): bogus')
