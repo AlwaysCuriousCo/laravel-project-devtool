@@ -45,6 +45,24 @@ it('can target the DatabaseMigrated lifecycle event', function () {
         ->toContain('public function handle(DatabaseMigrated $event): void');
 });
 
+it('uses a published stub when one exists at stubs/dev-hook.stub', function () {
+    $stubPath = base_path('stubs');
+    File::ensureDirectoryExists($stubPath);
+    File::put($stubPath.'/dev-hook.stub', "<?php\n// CUSTOM PUBLISHED STUB for {{ event }}\nclass {{ class }} {}\n");
+
+    try {
+        $this->artisan('make:dev-hook', ['name' => 'CustomHook', '--event' => 'DatabaseSeeded'])
+            ->assertExitCode(0);
+
+        $contents = File::get($this->listenerPath.'/CustomHook.php');
+        expect($contents)
+            ->toContain('CUSTOM PUBLISHED STUB for DatabaseSeeded')
+            ->toContain('class CustomHook');
+    } finally {
+        File::delete($stubPath.'/dev-hook.stub');
+    }
+});
+
 it('rejects an unknown event', function () {
     $this->artisan('make:dev-hook', ['name' => 'Bogus', '--event' => 'NopeNotReal'])
         ->expectsOutputToContain('Invalid --event')

@@ -77,6 +77,26 @@ describe('--only / --skip', function () {
             ->assertExitCode(0);
     });
 
+    it('warns about seeding, not dropping tables, when only seed runs', function () {
+        // seed alone is destructive (overwrites rows) but drops nothing, so the
+        // prompt must not claim "DROP ALL TABLES".
+        $this->artisan('project:dev', ['--setup' => true, '--only' => 'seed'])
+            ->expectsConfirmation(
+                "This will run the database seeders against connection 'testing' (database ':memory:'), overwriting existing data. Continue?",
+                'no'
+            )
+            ->assertExitCode(1);
+    });
+
+    it('warns about dropping tables without reseed when migrate runs alone', function () {
+        $this->artisan('project:dev', ['--setup' => true, '--only' => 'migrate'])
+            ->expectsConfirmation(
+                "This will DROP ALL TABLES on connection 'testing' (database ':memory:'). Continue?",
+                'no'
+            )
+            ->assertExitCode(1);
+    });
+
     it('rejects an unknown step name', function () {
         $this->artisan('project:dev', ['--setup' => true, '--only' => 'bogus'])
             ->expectsOutputToContain('Unknown step(s): bogus')

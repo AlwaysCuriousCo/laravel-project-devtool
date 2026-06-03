@@ -34,9 +34,18 @@ class MakeDevHook extends GeneratorCommand
         'SetupCompleted',
     ];
 
+    /**
+     * Prefer a published stub at stubs/dev-hook.stub so apps can customise the
+     * generated listener (the path the service provider publishes to), falling
+     * back to the package's own copy when it has not been published.
+     */
     protected function getStub(): string
     {
-        return __DIR__.'/../../resources/stubs/dev-hook.stub';
+        $published = $this->laravel->basePath('stubs/dev-hook.stub');
+
+        return file_exists($published)
+            ? $published
+            : __DIR__.'/../../resources/stubs/dev-hook.stub';
     }
 
     protected function getDefaultNamespace($rootNamespace): string

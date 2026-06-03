@@ -130,14 +130,18 @@ class ProjectDev extends Command
             return self::FAILURE;
         }
 
-        // 3. Destructive-wipe confirmation, naming the exact target. Skipped on
-        //    a dry run (nothing is wiped) or with --force.
+        // 3. Destructive-wipe confirmation, naming the exact target and the
+        //    actual effect of the resolved steps. Skipped on a dry run (nothing
+        //    is wiped) or with --force.
         if (! $this->dryRun && ! $this->option('force') && $this->runsAnyDestructiveStep($steps)) {
-            $proceed = $this->confirm(
-                "This will DROP ALL TABLES on connection '{$connection}'"
-                .($database ? " (database '{$database}')" : '')
-                .' and reseed. Continue?'
-            );
+            $target = "connection '{$connection}'".($database ? " (database '{$database}')" : '');
+
+            // Only migrate:fresh drops tables; seed alone just (re)writes rows.
+            $effect = in_array('migrate', $steps, true)
+                ? "This will DROP ALL TABLES on {$target}".(in_array('seed', $steps, true) ? ' and reseed' : '').'.'
+                : "This will run the database seeders against {$target}, overwriting existing data.";
+
+            $proceed = $this->confirm($effect.' Continue?');
 
             if (! $proceed) {
                 $this->error('Aborted — nothing was changed.');
