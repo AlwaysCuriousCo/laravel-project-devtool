@@ -4,7 +4,7 @@
 [![Tests](https://github.com/alwayscurious/laravel-project-devtool/actions/workflows/run-tests.yml/badge.svg)](https://github.com/alwayscurious/laravel-project-devtool/actions/workflows/run-tests.yml)
 [![Total Downloads](https://img.shields.io/packagist/dt/alwayscurious/laravel-project-devtool.svg?style=flat-square)](https://packagist.org/packages/alwayscurious/laravel-project-devtool)
 
-**One command to a clean-slate dev environment — and a clean way for *your* app to hook into it.**
+**Simplify your developers' startup time on new projects from an existing repo — one command to a clean-slate dev environment, and a clean way for *your* app to hook into it.**
 
 `php artisan project:dev --setup` tears the local environment down and rebuilds
 it from scratch: clear caches → `migrate:fresh` → seed → build assets. Onboard a
