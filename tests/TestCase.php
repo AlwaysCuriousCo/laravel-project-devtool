@@ -2,9 +2,9 @@
 
 namespace AlwaysCurious\LaravelProjectDevtool\Tests;
 
+use AlwaysCurious\LaravelProjectDevtool\LaravelProjectDevtoolServiceProvider;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Orchestra\Testbench\TestCase as Orchestra;
-use AlwaysCurious\LaravelProjectDevtool\LaravelProjectDevtoolServiceProvider;
 
 class TestCase extends Orchestra
 {

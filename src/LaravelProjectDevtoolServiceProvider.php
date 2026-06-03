@@ -2,9 +2,9 @@
 
 namespace AlwaysCurious\LaravelProjectDevtool;
 
+use AlwaysCurious\LaravelProjectDevtool\Commands\LaravelProjectDevtoolCommand;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
-use AlwaysCurious\LaravelProjectDevtool\Commands\LaravelProjectDevtoolCommand;
 
 class LaravelProjectDevtoolServiceProvider extends PackageServiceProvider
 {
