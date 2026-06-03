@@ -163,14 +163,19 @@ class ProjectDev extends Command
 
         // 5. Clear caches, then fire CachesCleared.
         if (in_array('caches', $steps, true)) {
-            $this->step('caches', 'optimize:clear', fn () => $this->callArtisan('optimize:clear'));
+            if (! $this->step('caches', 'optimize:clear', fn () => $this->callArtisan('optimize:clear'))) {
+                return self::FAILURE;
+            }
             $this->fire(new CachesCleared($this, $this->dryRun));
         }
 
         // 6. Rebuild the schema (NO --seed — seeding is a separate later step),
-        //    then fire DatabaseMigrated in the deliberate pre-seed gap.
+        //    then fire DatabaseMigrated in the deliberate pre-seed gap. A failed
+        //    migrate must halt before the event fires and before seeding.
         if (in_array('migrate', $steps, true)) {
-            $this->step('migrate', 'migrate:fresh', fn () => $this->callArtisan('migrate:fresh', ['--force' => true]));
+            if (! $this->step('migrate', 'migrate:fresh', fn () => $this->callArtisan('migrate:fresh', ['--force' => true]))) {
+                return self::FAILURE;
+            }
             $this->fire(new DatabaseMigrated($this, $this->dryRun));
         }
 
@@ -182,7 +187,9 @@ class ProjectDev extends Command
             if (! empty($seeder)) {
                 $seedParams['--class'] = $seeder;
             }
-            $this->step('seed', 'db:seed', fn () => $this->callArtisan('db:seed', $seedParams));
+            if (! $this->step('seed', 'db:seed', fn () => $this->callArtisan('db:seed', $seedParams))) {
+                return self::FAILURE;
+            }
             $this->fire(new DatabaseSeeded($this, $this->dryRun));
         }
 
@@ -284,14 +291,20 @@ class ProjectDev extends Command
     }
 
     /**
-     * Run a nested artisan command (no-op on a dry run). Returns true so it can
-     * compose with the step() success contract.
+     * Run a nested artisan command, returning true only on a zero exit code so
+     * a failed step composes with the step() success contract and halts the run.
      *
      * @param  array<string, mixed>  $parameters
      */
     private function callArtisan(string $command, array $parameters = []): bool
     {
-        $this->call($command, $parameters);
+        $exitCode = $this->call($command, $parameters);
+
+        if ($exitCode !== self::SUCCESS) {
+            $this->error("Failed: {$command} (exit {$exitCode})");
+
+            return false;
+        }
 
         return true;
     }

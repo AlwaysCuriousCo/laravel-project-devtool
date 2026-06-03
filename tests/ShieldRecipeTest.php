@@ -48,6 +48,20 @@ it('runs shield:generate with the configured panel when the recipe fires', funct
         ->and(FakeShieldGenerate::$panel)->toBe('control');
 });
 
+it('announces but does not run shield:generate on a dry run', function () {
+    FakeShieldGenerate::$runs = 0;
+
+    $this->app[Kernel::class]->registerCommand(new FakeShieldGenerate);
+
+    Event::listen(DatabaseMigrated::class, GenerateShieldPermissions::class);
+
+    $this->artisan('project:dev', ['--setup' => true, '--dry-run' => true])
+        ->expectsOutputToContain('[dry-run] would run: shield:generate')
+        ->assertExitCode(0);
+
+    expect(FakeShieldGenerate::$runs)->toBe(0);
+});
+
 it('skips cleanly with a notice when shield:generate is not registered', function () {
     // No FakeShieldGenerate registered: the recipe must skip, not error.
     Event::listen(DatabaseMigrated::class, GenerateShieldPermissions::class);

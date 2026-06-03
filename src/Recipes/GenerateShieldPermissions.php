@@ -28,6 +28,12 @@ final class GenerateShieldPermissions
 
         $panel = config('project-devtool.recipes.shield.panel', 'admin');
 
+        if ($event->dryRun) {
+            $command->line("  <comment>[dry-run]</comment> would run: shield:generate --all --panel={$panel}");
+
+            return;
+        }
+
         $command->info('Generating Shield permissions…');
 
         $command->call('shield:generate', [
