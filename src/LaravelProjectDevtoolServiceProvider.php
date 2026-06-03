@@ -2,7 +2,6 @@
 
 namespace AlwaysCurious\LaravelProjectDevtool;
 
-use AlwaysCurious\LaravelProjectDevtool\Commands\LaravelProjectDevtoolCommand;
 use AlwaysCurious\LaravelProjectDevtool\Commands\MakeDevHook;
 use AlwaysCurious\LaravelProjectDevtool\Commands\ProjectDev;
 use AlwaysCurious\LaravelProjectDevtool\Events\DatabaseMigrated;
