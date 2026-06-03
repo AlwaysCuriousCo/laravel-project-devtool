@@ -25,17 +25,42 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 5
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        php: [8.5, 8.4, 8.3]
-        laravel: [13.*, 12.*]
-        stability: [prefer-lowest, prefer-stable]
+        # Test the edges of the support surface rather than the full cartesian
+        # product: the oldest-supported combo (prefer-lowest catches use of
+        # too-new APIs) and the newest combo (prefer-stable catches deprecations),
+        # plus representative middle points. Linux only — see CONTRIBUTING for
+        # the rationale on dropping Windows.
         include:
-          - laravel: 13.*
-            testbench: 11.*
-          - laravel: 12.*
+          # Oldest supported: PHP 8.3 + Laravel 11, lowest deps
+          - os: ubuntu-latest
+            php: 8.3
+            laravel: 11.*
+            testbench: 9.*
+            stability: prefer-lowest
+          # Laravel 12 across the PHP range, stable deps
+          - os: ubuntu-latest
+            php: 8.3
+            laravel: 12.*
             testbench: 10.*
+            stability: prefer-stable
+          - os: ubuntu-latest
+            php: 8.4
+            laravel: 12.*
+            testbench: 10.*
+            stability: prefer-stable
+          # Newest supported: PHP 8.5 + Laravel 13, both stability ends
+          - os: ubuntu-latest
+            php: 8.5
+            laravel: 13.*
+            testbench: 11.*
+            stability: prefer-lowest
+          - os: ubuntu-latest
+            php: 8.5
+            laravel: 13.*
+            testbench: 11.*
+            stability: prefer-stable
 
     name: P${{ matrix.php }} - L${{ matrix.laravel }} - ${{ matrix.stability }} - ${{ matrix.os }}
 
