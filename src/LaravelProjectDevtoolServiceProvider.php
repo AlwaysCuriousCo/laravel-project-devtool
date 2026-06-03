@@ -1,12 +1,12 @@
 <?php
 
-namespace VendorName\Skeleton;
+namespace AlwaysCurious\LaravelProjectDevtool;
 
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
-use VendorName\Skeleton\Commands\SkeletonCommand;
+use AlwaysCurious\LaravelProjectDevtool\Commands\LaravelProjectDevtoolCommand;
 
-class SkeletonServiceProvider extends PackageServiceProvider
+class LaravelProjectDevtoolServiceProvider extends PackageServiceProvider
 {
     public function configurePackage(Package $package): void
     {
@@ -16,10 +16,10 @@ class SkeletonServiceProvider extends PackageServiceProvider
          * More info: https://github.com/spatie/laravel-package-tools
          */
         $package
-            ->name('skeleton')
+            ->name('laravel-project-devtool')
             ->hasConfigFile()
             ->hasViews()
-            ->hasMigration('create_migration_table_name_table')
-            ->hasCommand(SkeletonCommand::class);
+            ->hasMigration('create_laravel_project_devtool_table')
+            ->hasCommand(LaravelProjectDevtoolCommand::class);
     }
 }

@@ -1,17 +1,17 @@
 {
-    "name": ":vendor_slug/:package_slug",
-    "description": ":package_description",
+    "name": "alwayscurious/laravel-project-devtool",
+    "description": "Simplify your developer's startup time on new projects from existing repo.",
     "keywords": [
-        ":vendor_name",
+        "Always Curious Co",
         "laravel",
-        ":package_slug"
+        "laravel-project-devtool"
     ],
-    "homepage": "https://github.com/:vendor_slug/:package_slug",
+    "homepage": "https://github.com/alwayscurious/laravel-project-devtool",
     "license": "MIT",
     "authors": [
         {
-            "name": ":author_name",
-            "email": "author@domain.com",
+            "name": "Timothy Wood",
+            "email": "tim@alwayscurious.co",
             "role": "Developer"
         }
     ],
@@ -35,13 +35,13 @@
     },
     "autoload": {
         "psr-4": {
-            "VendorName\\Skeleton\\": "src/",
-            "VendorName\\Skeleton\\Database\\Factories\\": "database/factories/"
+            "AlwaysCurious\\LaravelProjectDevtool\\": "src/",
+            "AlwaysCurious\\LaravelProjectDevtool\\Database\\Factories\\": "database/factories/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "VendorName\\Skeleton\\Tests\\": "tests/",
+            "AlwaysCurious\\LaravelProjectDevtool\\Tests\\": "tests/",
             "Workbench\\App\\": "workbench/app/"
         }
     },
@@ -63,10 +63,10 @@
     "extra": {
         "laravel": {
             "providers": [
-                "VendorName\\Skeleton\\SkeletonServiceProvider"
+                "AlwaysCurious\\LaravelProjectDevtool\\LaravelProjectDevtoolServiceProvider"
             ],
             "aliases": {
-                "Skeleton": "VendorName\\Skeleton\\Facades\\Skeleton"
+                "LaravelProjectDevtool": "AlwaysCurious\\LaravelProjectDevtool\\Facades\\LaravelProjectDevtool"
             }
         }
     },
