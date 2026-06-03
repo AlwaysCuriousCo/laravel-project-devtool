@@ -64,6 +64,25 @@ it('installs dependencies with --new and bails on a failing process', function (
     expect($labels)->toBe(['composer install']); // npm install never reached
 });
 
+it('installs dependencies when --only=install is named, even without --new', function () {
+    // An explicit `install` in --only opts into installs on its own, so the run
+    // does real work instead of reporting "Steps run: install" while doing none.
+    config()->set('project-devtool.build', null);
+    config()->set('project-devtool.install', [
+        'composer' => ['composer', 'install'],
+        'npm' => ['npm', 'install'],
+    ]);
+
+    $fake = useFakeProjectDev();
+
+    $this->artisan('project:dev', ['--setup' => true, '--force' => true, '--only' => 'install'])
+        ->expectsOutputToContain('Dependencies: installed')
+        ->assertExitCode(0);
+
+    $labels = array_column($fake->calls, 'label');
+    expect($labels)->toBe(['composer install', 'npm install']);
+});
+
 it('reports installed dependencies in the summary with --new', function () {
     config()->set('project-devtool.build', null);
     $fake = useFakeProjectDev();

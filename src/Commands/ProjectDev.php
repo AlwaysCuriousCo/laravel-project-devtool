@@ -151,7 +151,10 @@ class ProjectDev extends Command
         }
 
         // 4. Optional dependency install (composer + npm) via real processes.
-        if ($this->option('new') && in_array('install', $steps, true)) {
+        //    Runs when the user opts in with --new, OR when they explicitly
+        //    name `install` in --only (an explicit request implies --new, so
+        //    `--only=install` never silently no-ops).
+        if ($this->shouldInstall($steps)) {
             $install = config('project-devtool.install', []);
 
             $composer = $install['composer'] ?? null;
@@ -180,7 +183,20 @@ class ProjectDev extends Command
             if (! $this->step('migrate', 'migrate:fresh', fn () => $this->callArtisan('migrate:fresh', ['--force' => true]))) {
                 return self::FAILURE;
             }
-            $this->fire(new DatabaseMigrated($this, $this->dryRun));
+
+            // The pre-seed gap is the one mid-run point where a recipe may still
+            // veto: it runs after the schema is rebuilt but before db:seed, so a
+            // listener that prepares seed prerequisites (e.g. Shield permissions)
+            // can halt the run if that preparation fails, rather than letting the
+            // seeder run against a half-built state.
+            try {
+                $this->fire(new DatabaseMigrated($this, $this->dryRun), allowAbort: true);
+            } catch (AbortSetup $e) {
+                $this->error($e->getMessage());
+                $this->line('Database was migrated but not seeded.');
+
+                return self::FAILURE;
+            }
         }
 
         // 7. Seed (plain db:seed — model events stay enabled), then fire
@@ -273,6 +289,34 @@ class ProjectDev extends Command
     }
 
     /**
+     * Whether dependency installs should run. `install` is opt-in via --new,
+     * but explicitly naming it in --only is itself an opt-in: otherwise
+     * `--only=install` would resolve `install` into the step list, run nothing,
+     * and still report "Steps run: install" with a success exit. An explicit
+     * request therefore implies --new.
+     *
+     * @param  array<int, string>  $steps
+     */
+    private function shouldInstall(array $steps): bool
+    {
+        if (! in_array('install', $steps, true)) {
+            return false;
+        }
+
+        return $this->option('new') || $this->onlyRequested('install');
+    }
+
+    /**
+     * Whether the given step was explicitly named in --only.
+     */
+    private function onlyRequested(string $step): bool
+    {
+        return collect(explode(',', (string) $this->option('only')))
+            ->map(fn ($s) => Str::lower(trim($s)))
+            ->contains($step);
+    }
+
+    /**
      * Execute a named step, recording its wall-clock time. On a dry run the
      * action is announced but not executed, and the step is treated as a
      * success so the simulated run continues to completion.
@@ -344,15 +388,15 @@ class ProjectDev extends Command
         }
 
         $this->line('Dependencies: '.(
-            $this->option('new') && in_array('install', $steps, true) ? 'installed' : 'skipped (pass --new)'
+            $this->shouldInstall($steps) ? 'installed' : 'skipped (pass --new)'
         ));
     }
 
     /**
      * Dispatch a lifecycle event with veto semantics.
      *
-     * - AbortSetup from a pre-flight point ($allowAbort) is re-thrown so the
-     *   caller can cleanly cancel the run.
+     * - AbortSetup from a sanctioned abort point ($allowAbort) is re-thrown so
+     *   the caller can cleanly cancel the run.
      * - AbortSetup thrown anywhere else is a misplaced veto: reported and
      *   swallowed so it cannot leave the database half-built.
      * - Any other listener failure is reported and swallowed — a broken

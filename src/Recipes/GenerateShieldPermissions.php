@@ -2,7 +2,9 @@
 
 namespace AlwaysCurious\LaravelProjectDevtool\Recipes;
 
+use AlwaysCurious\LaravelProjectDevtool\Events\AbortSetup;
 use AlwaysCurious\LaravelProjectDevtool\Events\DatabaseMigrated;
+use Illuminate\Console\Command;
 
 /**
  * Opt-in recipe listener that regenerates filament-shield permissions in the
@@ -36,10 +38,17 @@ final class GenerateShieldPermissions
 
         $command->info('Generating Shield permissions…');
 
-        $command->call('shield:generate', [
+        $exitCode = $command->call('shield:generate', [
             '--all' => true,
             '--panel' => $panel,
             '--no-interaction' => true,
         ]);
+
+        // The recipe exists to populate permissions before db:seed grants them.
+        // If generation fails, seeding against missing permissions would leave a
+        // silently broken database, so halt the run in the pre-seed gap.
+        if ($exitCode !== Command::SUCCESS) {
+            throw new AbortSetup("shield:generate failed (exit {$exitCode}); halting before seed.");
+        }
     }
 }

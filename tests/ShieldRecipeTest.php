@@ -1,7 +1,9 @@
 <?php
 
 use AlwaysCurious\LaravelProjectDevtool\Events\DatabaseMigrated;
+use AlwaysCurious\LaravelProjectDevtool\Events\DatabaseSeeded;
 use AlwaysCurious\LaravelProjectDevtool\Recipes\GenerateShieldPermissions;
+use AlwaysCurious\LaravelProjectDevtool\Tests\TestSeeder;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Support\Facades\Event;
@@ -60,6 +62,43 @@ it('announces but does not run shield:generate on a dry run', function () {
         ->assertExitCode(0);
 
     expect(FakeShieldGenerate::$runs)->toBe(0);
+});
+
+/**
+ * A shield:generate stand-in that fails, to prove the recipe halts the run
+ * before seeding when permission generation does not succeed.
+ */
+class FailingShieldGenerate extends Command
+{
+    protected $signature = 'shield:generate {--all} {--panel=}';
+
+    protected $description = 'failing shield:generate';
+
+    public function handle(): int
+    {
+        return self::FAILURE;
+    }
+}
+
+it('aborts before seeding when shield:generate fails', function () {
+    TestSeeder::$runs = 0;
+    $seeded = false;
+
+    $this->app[Kernel::class]->registerCommand(new FailingShieldGenerate);
+
+    Event::listen(DatabaseMigrated::class, GenerateShieldPermissions::class);
+    Event::listen(DatabaseSeeded::class, function () use (&$seeded) {
+        $seeded = true;
+    });
+
+    $this->artisan('project:dev', ['--setup' => true, '--force' => true])
+        ->expectsOutputToContain('shield:generate failed')
+        ->expectsOutputToContain('migrated but not seeded')
+        ->assertExitCode(1);
+
+    // The schema was rebuilt, but seeding never ran against missing permissions.
+    expect($seeded)->toBeFalse()
+        ->and(TestSeeder::$runs)->toBe(0);
 });
 
 it('skips cleanly with a notice when shield:generate is not registered', function () {
