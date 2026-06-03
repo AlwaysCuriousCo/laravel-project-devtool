@@ -48,9 +48,13 @@ php artisan project:dev --setup    # the full reset, with a confirmation prompt
 
 ```
 project:dev
-    {--setup : Fresh reset — rebuild DB, seed, and build assets}
-    {--new   : With --setup, also install dependencies (composer + npm install)}
-    {--force : With --setup, skip confirmation prompts}
+    {--setup            : Fresh reset — rebuild DB, seed, and build assets}
+    {--new              : With --setup, also install dependencies (composer + npm install)}
+    {--force            : With --setup, skip confirmation prompts}
+    {--dry-run          : With --setup, simulate the run without making any changes}
+    {--only=            : With --setup, run ONLY these steps (comma-separated)}
+    {--skip=            : With --setup, skip these steps (comma-separated)}
+    {--force-production : Allow --setup to run when the app environment is production}
 ```
 
 | You want to…                                   | Run |
@@ -59,10 +63,62 @@ project:dev
 | Reset the environment                          | `php artisan project:dev --setup` |
 | Reset a freshly cloned repo, deps and all      | `php artisan project:dev --setup --new` |
 | Reset unattended (CI, scripts)                 | `php artisan project:dev --setup --force` |
+| Preview exactly what would happen, change nothing | `php artisan project:dev --setup --dry-run` |
+| Just reseed (no wipe, no asset build)          | `php artisan project:dev --setup --only=seed` |
+| Everything except the slow asset build         | `php artisan project:dev --setup --skip=build` |
 
 Before wiping anything, `--setup` confirms with a prompt that **names the exact
 connection and database** it's about to drop — so a wrong `.env` can't surprise
-you. `--force` skips it.
+you. `--force` skips it. And it **refuses to run in `production`** unless you
+pass `--force-production`.
+
+### Run only the steps you need
+
+`--setup` is no longer all-or-nothing. The selectable steps, in order, are
+`install`, `caches`, `migrate`, `seed`, `build`. Use `--only` to run a subset or
+`--skip` to drop a few:
+
+```bash
+php artisan project:dev --setup --only=migrate,seed   # rebuild + reseed, skip caches/build
+php artisan project:dev --setup --skip=build          # everything but the asset build
+```
+
+The confirmation prompt only appears when a **destructive** step (`migrate` or
+`seed`) is actually in the run — `--only=caches` won't ask.
+
+### Preview with `--dry-run`
+
+`--dry-run` walks the entire sequence, prints what each step *would* do, fires
+every lifecycle event (so your listeners can announce their intent too), and
+**changes nothing** — no migrations, no seeding, no processes, no prompt:
+
+```text
+DRY RUN — simulating; no changes will be made.
+
+  [dry-run] would run: optimize:clear
+  [dry-run] would run: migrate:fresh
+  [dry-run] would run: db:seed
+  [dry-run] would run: asset build
+
+✔ Dry run complete — no changes were made.
+```
+
+### Timing report
+
+Every real run prints a per-step timing table at the end, so you can see where
+onboarding time actually goes:
+
+```text
+ ------------------ ---------
+  Step               Time
+ ------------------ ---------
+  optimize:clear     0.04s
+  migrate:fresh      2.11s
+  db:seed            0.83s
+  asset build       14.29s
+  total             17.27s
+ ------------------ ---------
+```
 
 ---
 
@@ -87,6 +143,7 @@ can run nested artisan commands:
 $event->command->info('…');                                 // same output stream
 $event->command->option('new');                             // read invocation flags
 $event->command->call('some:command', ['--force' => true]); // nested artisan
+$event->dryRun;                                             // true during --dry-run
 ```
 
 ### Why seeding comes *after* a separate `DatabaseMigrated` event
@@ -127,6 +184,13 @@ class BuildDemoData
 {
     public function handle(DatabaseSeeded $event): void
     {
+        // Respect a simulation: announce intent, change nothing.
+        if ($event->dryRun) {
+            $event->command->line('  [dry-run] would seed demo content');
+
+            return;
+        }
+
         $event->command->info('Seeding demo content…');
         $event->command->call('db:seed', [
             '--class' => \Database\Seeders\DemoSeeder::class,

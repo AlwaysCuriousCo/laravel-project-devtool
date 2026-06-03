@@ -16,10 +16,15 @@ use Illuminate\Console\Command;
  * handle() method — Laravel auto-discovers them in the consuming app's
  * app/Listeners directory. No string keys, no ordering config, no
  * central registration.
+ *
+ * When the run is a simulation (`project:dev --setup --dry-run`), $dryRun is
+ * true — a well-behaved listener should announce what it WOULD do and return
+ * without making changes.
  */
 abstract class SetupEvent
 {
     public function __construct(
         public readonly Command $command,
+        public readonly bool $dryRun = false,
     ) {}
 }

@@ -22,7 +22,9 @@ it('generates a listener type-hinted to the chosen event', function () {
     expect($contents)
         ->toContain('use AlwaysCurious\LaravelProjectDevtool\Events\DatabaseSeeded;')
         ->toContain('public function handle(DatabaseSeeded $event): void')
-        ->toContain('class BuildDemoData');
+        ->toContain('class BuildDemoData')
+        // the scaffolded hook models the dry-run contract
+        ->toContain('if ($event->dryRun)');
 });
 
 it('defaults to DatabaseSeeded when no event is given', function () {

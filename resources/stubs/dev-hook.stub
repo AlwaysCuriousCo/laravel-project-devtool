@@ -22,11 +22,21 @@ use AlwaysCurious\LaravelProjectDevtool\Events\{{ event }};
  *   - call nested artisan commands:  $event->command->call('some:command', [...]);
  *   - read the invocation options:   $event->command->option('new');
  *   - write to the console output:   $event->command->info('...');
+ *
+ * $event->dryRun is true during `project:dev --setup --dry-run`. When it is set,
+ * announce what you WOULD do and return without making changes.
  */
 class {{ class }}
 {
     public function handle({{ event }} $event): void
     {
+        // Respect a simulation: announce intent, change nothing.
+        if ($event->dryRun) {
+            $event->command->line('  [dry-run] would run my custom step');
+
+            return;
+        }
+
         // Example: run another artisan command as part of the reset.
         // $event->command->info('Doing my custom step…');
         // $event->command->call('my:command', ['--force' => true]);
