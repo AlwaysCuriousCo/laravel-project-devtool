@@ -4,18 +4,18 @@
 [![Tests](https://github.com/alwayscurious/laravel-project-devtool/actions/workflows/run-tests.yml/badge.svg)](https://github.com/alwayscurious/laravel-project-devtool/actions/workflows/run-tests.yml)
 [![Total Downloads](https://img.shields.io/packagist/dt/alwayscurious/laravel-project-devtool.svg?style=flat-square)](https://packagist.org/packages/alwayscurious/laravel-project-devtool)
 
-**Simplify your developers' startup time on new projects from an existing repo — one command to a clean-slate dev environment, and a clean way for *your* app to hook into it.**
+**One command to a clean-slate Laravel dev environment — with lifecycle hooks so *your* app plugs into the reset without forking this package.**
 
-`php artisan project:dev --setup` tears the local environment down and rebuilds
-it from scratch: clear caches → `migrate:fresh` → seed → build assets. Onboard a
-new teammate, recover from a broken branch, or reset between feature spikes in a
-single command instead of a wiki page of steps.
+`php artisan project:dev --setup` rebuilds the local environment from scratch —
+clear caches → `migrate:fresh` → seed → build assets — so onboarding a teammate,
+recovering from a broken branch, or resetting between feature spikes is one
+command instead of a wiki page of steps.
 
-The part that makes it worth installing instead of writing your own shell
-script: at every stage of the reset it fires a **lifecycle event**, and your app
-attaches its own work by dropping a listener into `app/Listeners`. Generate
-permissions, seed demo data, print login credentials — **without ever editing
-this package**. The engine is mechanism; your app supplies the policy.
+What makes it worth installing over a shell script: every stage fires a
+**lifecycle event**, and your app hooks in by dropping a listener into
+`app/Listeners` — generate permissions, seed demo data, print login credentials,
+all **without editing this package**. The engine is mechanism; your app supplies
+the policy.
 
 > ⚠️ **Dev-only.** `--setup` runs `migrate:fresh`, which **drops every table**.
 > Install it as a `--dev` dependency and never point it at data you care about.
