@@ -181,9 +181,19 @@ class ProjectDev extends Command
             }
         }
 
-        // 5. Clear caches, then fire CachesCleared.
+        // 5. Clear caches, then fire CachesCleared. Laravel's optimize:clear does
+        //    not touch Filament's own caches (panel components + Blade icons), so
+        //    when Filament is detected we also run filament:optimize-clear, which
+        //    clears both. Detection is presence of the registered command, so a
+        //    non-Filament project pulls in zero coupling.
         if (in_array('caches', $steps, true)) {
             if (! $this->step('caches', 'optimize:clear', fn () => $this->callArtisan('optimize:clear'))) {
+                return self::FAILURE;
+            }
+            // Only register the Filament step when Filament is actually present,
+            // so non-Filament projects get no stray no-op line in the summary.
+            if ($this->getApplication()->has('filament:optimize-clear')
+                && ! $this->step('caches', 'filament:optimize-clear', fn () => $this->callArtisan('filament:optimize-clear'))) {
                 return self::FAILURE;
             }
             $this->fire(new CachesCleared($this, $this->dryRun));

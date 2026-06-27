@@ -86,6 +86,11 @@ php artisan project:dev --setup --skip=build          # everything but the asset
 The confirmation prompt only appears when a **destructive** step (`migrate` or
 `seed`) is actually in the run — `--only=caches` won't ask.
 
+The `caches` step runs Laravel's `optimize:clear`, and when [Filament](https://filamentphp.com)
+is detected (its `filament:optimize-clear` command is registered) it also clears
+Filament's cached panel components and Blade icons. Projects without Filament
+pull in zero coupling — the extra clear is skipped silently.
+
 ### Preview with `--dry-run`
 
 `--dry-run` walks the entire sequence, prints what each step *would* do, fires
@@ -130,6 +135,7 @@ The sequence is fixed and ordering-sensitive — your listeners can rely on it:
   ┌─ SetupStarting      ← guard point; a listener may veto here (AbortSetup)
   │   (wipe confirmation)
   ├─ optimize:clear  →  CachesCleared
+  │   (+ filament:optimize-clear when Filament is detected)
   ├─ migrate:fresh   →  DatabaseMigrated   ← the gap before seeding
   ├─ db:seed         →  DatabaseSeeded
   ├─ asset build     →  AssetsBuilding (fired just before the build)
@@ -205,7 +211,7 @@ class BuildDemoData
 | Event              | Fires…                                                   | Reach for it to… |
 | ------------------ | -------------------------------------------------------- | ---------------- |
 | `SetupStarting`    | before the wipe confirmation; **may throw `AbortSetup`** | guard the run (env present? right branch?) |
-| `CachesCleared`    | after `optimize:clear`                                   | prep that needs a clean cache/config |
+| `CachesCleared`    | after `optimize:clear` (+ `filament:optimize-clear` when Filament is present) | prep that needs a clean cache/config |
 | `DatabaseMigrated` | after `migrate:fresh`, **before** seeding                | generate permissions / data the seeder needs |
 | `DatabaseSeeded`   | after `db:seed`                                          | demo / sample data |
 | `AssetsBuilding`   | just before the asset build                              | prepare build inputs |
